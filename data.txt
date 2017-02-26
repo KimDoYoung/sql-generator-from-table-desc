@@ -1,0 +1,3 @@
+NAME	TYPE
+NAME	VARCHAR(10)	PK1	이름
+age	INT	나이

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Sql Generator from table desc - orange version</title>
+  </head>
+  <body>
+    <div id="divImsi"></div>
+    orange table info &nbsp;&nbsp; <input type="button" value="Clear" id="btnClear"/>&nbsp;<input type="button" value="Table" id="btnShowTable" title="display with table style" />
+    <br/><textarea name="src" id="src" rows="10" cols="80"></textarea><br/>
+    <div id="divTableArea"></div>
+    <button type="button" name="btnProperty" id="btnProperty" title="Property">Property</button>
+    format : <input type="text" id="prefix" />
+    <button type="button" id="btnFormat" title="run format">Run</button><br/>
+    Table name :   <input type="text" id="tableName" name="tableName" />&nbsp;&nbsp;
+    <input type="button" name="btnSqls" value="Select" title="create select sql with table">Select</button>
+    <input type="button" name="btnSqls" value="Insert" title="create insert sql with table">Insert</button>
+    <input type="button" name="btnSqls" value="Update" title="create update sql with table">Update</button>
+    <input type="button" name="btnSqls" value="Delete" title="create delete sql with table">Delete</button>
+    <input type="button" name="btnSqls" value="Merge"  title="create merge sql with table">Merge</button>
+    <br>
+    <textarea id="des" name="des" rows="10" cols="80"></textarea>
+    <br>
+    <button type="button" name="btnCtc" title="copy to clipboard">Copy to clipboard</button>
+    <br><br>
+    <strong>about format</strong>&nbsp;<a href="#none" id="btnFormatHelp">?</a><br>
+    <div id="divFormatHelp" style="display:none">
+      <pre>
+각 필드번호
+{0} : columnName
+{1} : id
+{2} : pk
+{3} : isNull
+{4} : dataType
+{5} : defaultValue
+{6} : comment
+{7} : property
+{8} : no
+      </pre>
+    </div>
+    <table>
+      <tr>
+        <td>SQL Select With Comment</td>
+        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><button class="formatbutton" data-idno="1">run</button></td>
+      </tr>
+      <tr>
+        <td>Update SET</td>
+        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><button class="formatbutton" data-idno="2">run</button></td>
+      </tr>
+      <tr>
+        <td>Select fields</td>
+        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><button class="formatbutton" data-idno="3">run</button></td>
+      </tr>
+      <tr>
+        <td>Table Head with comment</td>
+        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><button class="formatbutton" data-idno="4">run</button></td>
+      </tr>
+    </table>
+
+
+    <script
+      src="https://code.jquery.com/jquery-1.12.4.min.js"
+      integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+      crossorigin="anonymous"></script>
+   <script src="orange.js"></script>
+   <script>
+   $( document ).ready(function() {
+     var $src = $('#src'), $des = $('#des');
+     //button clear
+     $('#btnClear').on('click', function(){
+       $src.val(''); $des.val('');
+     });
+     //button property
+     $('#btnProperty').on('click', function(){
+         $des.val(orange.genProperty($src.val()));
+     });
+     $('input[name=btnSqls]').on('click', function(){
+         var command = $(this).val(), tableName = $('#tableName').val().toUpperCase();
+         var sqlStatement;
+         if(command === 'Select'){
+           sqlStatement = orange.selectStatement( tableName, $src.val() );
+           $des.val(sqlStatement);
+         }else if(command === 'Insert'){
+           sqlStatement = orange.insertStatement( tableName, $src.val() );
+           $des.val(sqlStatement);
+         }else if(command === 'Update'){
+           sqlStatement = orange.updateStatement( tableName, $src.val() );
+           $des.val(sqlStatement);
+         }else if(command === 'Delete'){
+           sqlStatement = orange.deleteStatement( tableName, $src.val() );
+           $des.val(sqlStatement);
+         }else if(command === 'Merge'){
+           sqlStatement = orange.mergeStatement( tableName, $src.val() );
+           $des.val(sqlStatement);
+         }
+     });
+   });
+   </script>
+
+  </body>
+</html>
