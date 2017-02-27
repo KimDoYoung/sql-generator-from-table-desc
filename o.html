@@ -6,18 +6,23 @@
   </head>
   <body>
     <div id="divImsi"></div>
-    orange table info &nbsp;&nbsp; <input type="button" value="Clear" id="btnClear"/>&nbsp;<input type="button" value="Table" id="btnShowTable" title="display with table style" />
-    <br/><textarea name="src" id="src" rows="10" cols="80"></textarea><br/>
+    orange table info &nbsp;&nbsp; <input type="button" value="Clear" id="btnClear"/>&nbsp;
+    <input type="button" value="Table" id="btnShowTable" title="display with table style" />
+    <br/><textarea name="src" id="src" rows="10" cols="80">
+      NAME	TYPE
+      NAME	VARCHAR(10)	PK1	이름
+      age	INT	나이
+    </textarea><br/>
     <div id="divTableArea"></div>
     <button type="button" name="btnProperty" id="btnProperty" title="Property">Property</button>
     format : <input type="text" id="prefix" />
     <button type="button" id="btnFormat" title="run format">Run</button><br/>
     Table name :   <input type="text" id="tableName" name="tableName" />&nbsp;&nbsp;
-    <input type="button" name="btnSqls" value="Select" title="create select sql with table">Select</button>
-    <input type="button" name="btnSqls" value="Insert" title="create insert sql with table">Insert</button>
-    <input type="button" name="btnSqls" value="Update" title="create update sql with table">Update</button>
-    <input type="button" name="btnSqls" value="Delete" title="create delete sql with table">Delete</button>
-    <input type="button" name="btnSqls" value="Merge"  title="create merge sql with table">Merge</button>
+    <input type="button" name="btnSqls" value="Select" title="create select sql with table"/>
+    <input type="button" name="btnSqls" value="Insert" title="create insert sql with table"/>
+    <input type="button" name="btnSqls" value="Update" title="create update sql with table"/>
+    <input type="button" name="btnSqls" value="Delete" title="create delete sql with table"/>
+    <input type="button" name="btnSqls" value="Merge"  title="create merge sql with table"/>
     <br>
     <textarea id="des" name="des" rows="10" cols="80"></textarea>
     <br>
@@ -41,22 +46,22 @@
     <table>
       <tr>
         <td>SQL Select With Comment</td>
-        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><input type="text" id="f1" value=",{1} ^ AS {2} ^ /** {3} */"></td>
         <td><button class="formatbutton" data-idno="1">run</button></td>
       </tr>
       <tr>
         <td>Update SET</td>
-        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><input type="text" id="f2" value=",{1} ^ = ^ #{2}#  ^ /** {3} */"></td>
         <td><button class="formatbutton" data-idno="2">run</button></td>
       </tr>
       <tr>
         <td>Select fields</td>
-        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><input type="text" id="f3" value=",{1} ^ /** {3} */"></td>
         <td><button class="formatbutton" data-idno="3">run</button></td>
       </tr>
       <tr>
         <td>Table Head with comment</td>
-        <td><input type="text" id="f1" value=",{0} ^ AS {7} ^ /** {6} */"></td>
+        <td><input type="text" id="f4" value="<td>{3}</td>"></td>
         <td><button class="formatbutton" data-idno="4">run</button></td>
       </tr>
     </table>
@@ -72,17 +77,35 @@
      var $src = $('#src'), $des = $('#des');
      //button clear
      $('#btnClear').on('click', function(){
-       $src.val(''); $des.val('');
+       $src.val(''); $des.val(''); $('#divTableArea').empty(); $('#tableName').val(''); $('#prefix').val('');
+     });
+     $('#btnShowTable').on('click', function(){
+      $('#divTableArea').html(orange.genTable($src.val())).append('<input type="button" value="X" onclick="$(\'#divTableArea\').empty()"/>');
+     });
+     $('#btnFormat').on('click', function(){
+         var formatString = $('#prefix').val(), src = $src.val(), r= '';
+         r = orange.applyFormat(src, formatString);
+         $des.val(r);
+     });
+     $('.formatbutton').on('click', function(){
+         var idno = $(this).data('idno');
+         var formatString = $('#f'+idno).val();
+         $('#prefix').val(formatString);
+         $('#btnFormat').click();
      });
      //button property
      $('#btnProperty').on('click', function(){
          $des.val(orange.genProperty($src.val()));
      });
      $('input[name=btnSqls]').on('click', function(){
+         var src = $src.val();
+         if(src == '') {
+           return;
+         }
          var command = $(this).val(), tableName = $('#tableName').val().toUpperCase();
          var sqlStatement;
          if(command === 'Select'){
-           sqlStatement = orange.selectStatement( tableName, $src.val() );
+           sqlStatement = orange.selectStatement( tableName, src );
            $des.val(sqlStatement);
          }else if(command === 'Insert'){
            sqlStatement = orange.insertStatement( tableName, $src.val() );

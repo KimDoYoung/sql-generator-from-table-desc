@@ -6,24 +6,28 @@ var orange = (function(){
     return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);
   }
   function setItemArray(src){
-    srcHashCode = hashCode(src);
+    var trimmedSrc = trim(src), code = hashCode(trimmedSrc);
+    if( code === srcHashCode){
+      return;
+    }
+    srcHashCode = code;
     var includeHead = false, no = 0;
-    src.split('\n').forEach(function(line){
+    trimmedSrc.split('\n').forEach(function(line){
         var fields = line.split('\t');
         if(fields[0].toUpperCase() === 'NAME' && fields[1].toUpperCase() === 'TYPE') {
           includeHead = true; return true;
         }
         var columnName, dataType, isPK, comment, property;
         if(fields.length === 4 ){
-          columnName = fields[0].toUpperCase();
-          dataType = fields[1].toUpperCase();
+          columnName = trim(fields[0]).toUpperCase();
+          dataType = trim(fields[1]).toUpperCase();
           isPK = true;
-          comment = fields[3].trim();
+          comment = trim(fields[3]);
         }else if( fields.length === 3 ){
-          columnName = fields[0].trim().toUpperCase();
-          dataType = fields[1].trim().toUpperCase();
+          columnName = trim(fields[0]).toUpperCase();
+          dataType = trim(fields[1]).toUpperCase();
           isPK = false;
-          comment = fields[2].trim();
+          comment = trim(fields[2]);
         }else{
           return true;
         }
@@ -76,15 +80,19 @@ var orange = (function(){
     });
   }
   //src에  format f를 적용해서 문자열을 리턴한다.
-  var applyFormat=function(src, f ){
-      var trimmedSrc = trim(src);
-      if(hashCode(trimmedSrc) !== srcHashCode){
-        setItemArray(trimmedSrc);
-      }
+  var applyFormat=function(src, formatString, option ){
+      var option = option || 'all';
+      setItemArray(src);
       var r = '';
       itemArray.forEach(function(fields){
+        if(option == 'pkonly' && !fields.isPK  ) {
+           return true;
+        }else if(option == 'notpkonly' && fields.isPK) {
+          return true;
+        }
+
         var property = toPropery(fields.columnName);
-        r += format(f, fields.no, fields.columnName, fields.property, fields.comment)+'\n';
+        r += format(formatString, fields.no, fields.columnName, fields.property, fields.comment)+'\n';
       });
       return r.trim();
   }
@@ -92,7 +100,7 @@ var orange = (function(){
     if(tableName === '' || startsWith(tableName, 'xxx') ){
        return '';
      }else {
-       return tableName.substring(0, 6).toUpperCase() + '.';
+       return tableName.substring(0, 6).toUpperCase() ;
      }
   }
   var removeFirst = function(src, ch, replaceCh){
@@ -111,7 +119,7 @@ var orange = (function(){
     src.split('\n').forEach(function(line){
        r += space + line + '\n';
     });
-    return r;
+    return rtrim(r);
   }
   var startsWith = function(s, needle){
     return s.indexOf(needle) === 0;
@@ -150,12 +158,27 @@ var orange = (function(){
     });
     return rtrim(r);
   }
+  var whereCondition = function(src){
+    setItemArray(src);
+    var r = '';
+    itemArray.forEach(function(item){
+      if(item.isPK){
+         r = 'AND ' + item.columnName + ' = #' + item.property + '#\n';
+      }
+    });
+    return r;
+  }
+  var maxLength= function(name){
+    var maxLen = -1;
+    itemArray.forEach(function(item){
+       var len = strlen(item.name+'');
+       maxLen = len > maxLen ? len : maxLen;
+    });
+    return maxLen;
+  }
   return {
     genProperty : function(src){
-        var trimmedSrc = src.trim();
-        if(hashCode(trimmedSrc) !== srcHashCode){
-          setItemArray(trimmedSrc);
-        }
+        setItemArray(src);
         var r = '';
         itemArray.forEach(function(fields){
           r += '@FieldInfo(name="' + fields.comment + '")\n';
@@ -164,37 +187,125 @@ var orange = (function(){
         });
         return r;
     },
+    genTable : function(src){
+        setItemArray(src);
+        var r = '<table border="1">\n';
+        r += '<tr><td>No</td><td>Column name</td><td>Type</td><td>nullable</td><td>comment</td><tr>';
+        itemArray.forEach(function(fields){
+          r += '<tr>';
+          var pk = fields.isPK ? 'PK' : '';
+          r += format('<td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td>',
+            fields.no, fields.columnName, fields.dataType, pk, fields.comment
+          )
+          r += '</tr>';
+        });
+        r += '</table>'
+        return r;
+
+    },
     selectStatement : function(tableName, src){
+      setItemArray(src);
       var tableName = tableName || 'xxxxx';
-      var tablePrefix = getTablePrefix(tableName);
+      var tablePrefix = getTablePrefix(tableName), tablePrefix2;
       var r = '';
       r += 'SELECT\n';
-      var tmp = applyFormat(src, "," + tablePrefix + "{1} ^ AS {2} ^ /** {3} */");
+      if(tablePrefix != '') tablePrefix2 = tablePrefix + '.';
+      var tmp = applyFormat(src, "," + tablePrefix2 + "{1} ^ AS {2} ^ /** {3} */");
           tmp = fixPosition(tmp);
           tmp = removeFirst(tmp, ',');
           tmp = prePad(tmp, 4, ' ');
       r += tmp ;
-      r += 'FROM ' + tablePrefix + tableName +'\n';
+      r += '\nFROM ' +  tableName + ' ' + tablePrefix + '\n';
       r += 'WHERE 1=1\n';
       return r;
     },
     insertStatement : function(tableName, src){
+      setItemArray(src);
       var tableName = tableName || 'xxxxx';
       var r = '', tmp;
       r += 'INSERT INTO ' + tableName + '\n(\n';
       tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
       r += tmp;
       r += '\n)VALUES(\n';
       tmp = applyFormat(src, ",#{2}# /** {3}  */");
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
       r += tmp;
       r += '\n)';
       return r;
     },
     updateStatement : function(tableName, src){
+      setItemArray(src);
+      var tableName = tableName || 'xxxxx', r = '', tmp ;
+      r += 'UPDATE ' + tableName + '\n';
+      r += 'SET\n';
+      tmp = applyFormat(src, ",{1} ^ = ^ #{2} ^ /** {3} */");
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
+      r += tmp;
+      r += '\nWHERE 1=1\n';
+      tmp = whereCondition(src);
+      tmp = prePad(tmp, 4, ' ');
+      r += tmp;
+      return r;
     },
     deleteStatement : function(tableName, src){
+      setItemArray(src);
+      var r = '';
+      var tableName = tableName || 'xxxxx', r = '', tmp ;
+      r += 'DELETE FROM ' + tableName + '\n';
+      r += 'WHERE 1=1\n';
+      r += prePad(whereCondition(src), 4);
+      return r;
     },
     mergeStatement  : function(tableName, src){
+      setItemArray(src);
+      var tableName = tableName || 'xxxxx', r = '', tmp ;
+      var r = '',tmp;
+      r += 'MERGE INTO ' + tableName + '\n';
+      r += 'USING DUAL\n';
+      r += '    ON ( ';
+      var tmpArray = [], maxColumnNameLength = 0, maxPropertyLength = 0;
+      itemArray.forEach(function(item){
+        if(item.isPK) {
+          tmpArray.push(item.columnName + ' = #' + item.property + '#');
+        }
+      });
+      r += tmpArray.join(' AND ');
+      r += ' )\n';
+      r += 'WHEN MATCHED THEN\n';
+      r += 'UPDATE SET\n';
+      tmp = applyFormat(src, ",{1} ^ = ^ #{2} ^ /** {3} */",'notpkonly');
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
+      r += tmp;
+      r += '\nWHEN NOT MATCHED THEN\n';
+      r += 'INSERT\n(\n';
+      tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
+      r += tmp;
+      r += '\n)VALUES(\n';
+      tmp = applyFormat(src, ",#{2}# /** {3}  */");
+      tmp = fixPosition(tmp);
+      tmp = removeFirst(tmp, ',');
+      tmp = prePad(tmp, 4, ' ');
+      r += tmp;
+      r += '\n)';
+      return r;
+    },//end mergeStatement
+    applyFormat : function(src,formatString){
+      setItemArray(src);
+      var r =  applyFormat(src, formatString);
+      r = fixPosition(r);
+      return r;
     }
   }
 })();
