@@ -177,6 +177,10 @@ var orange = (function(){
     return maxLen;
   }
   return {
+    clear : function(){
+      srcHashCode = '';
+      itemArray = [];
+    },
     genProperty : function(src){
         setItemArray(src);
         var r = '';
