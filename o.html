@@ -26,7 +26,7 @@
     <br>
     <textarea id="des" name="des" rows="10" cols="80"></textarea>
     <br>
-    <button type="button" name="btnCtc" title="copy to clipboard">Copy to clipboard</button>
+    <button type="button" id="btnCtc" name="btnCtc" title="copy to clipboard">Copy to clipboard</button>
     <br><br>
     <strong>about format</strong>&nbsp;<a href="#none" id="btnFormatHelp">?</a><br>
     <div id="divFormatHelp" style="display:none">
@@ -116,7 +116,29 @@
            $des.val(sqlStatement);
          }
      });
-   });
+     $('#btnCtc').on('click', function(){
+         var text = $des.get(0);
+         text.select();
+         try {
+           var ok = document.execCommand('copy');
+           if(!ok){
+              alert('fail to copy to clipboard');
+           }
+           $des.focus();
+         } catch (e) {
+           alert('not support');
+         } finally {
+           clearSelection();
+         }
+     });
+     function clearSelection(){
+       if(document.selection){
+         document.selection.empty();
+       }else{
+         window.getSelection().removeAllRanges();
+       }
+     }
+   }); //end of document ready
    </script>
 
   </body>
