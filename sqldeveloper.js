@@ -1,5 +1,29 @@
 "use strict";
-var orange = (function(){
+var options = {
+    formats : {
+       varNotation   : "#{{0}}",
+       insert_fields : ",{1} ^ /** {3} */",
+       insert_values : ",#{{2}} /** {3}  */",
+       update_set : ",{1} ^ = ^ #{{2}} ^ /** {3} */",
+       merge_update_set : ",{1} ^ = ^ #{{2}} ^ /** {3} */",
+       merge_insert_fields : ",{1} ^ /** {3} */",
+       merge_insert_value : ",#{{2}} /** {3}  */"
+    }
+}
+//options = undefined;
+var babo = (function(options){
+  var defaults = {
+      formats : {
+         varNotation   : "#{0}#",
+         insert_fields : ",{1} ^ /** {3} */",
+         insert_values : ",#{2}# /** {3}  */",
+         update_set : ",{1} ^ = ^ #{2}# ^ /** {3} */",
+         merge_update_set : ",{1} ^ = ^ #{2} ^ /** {3} */",
+         merge_insert_fields : ",{1} ^ /** {3} */",
+         merge_insert_value : ",#{2}# /** {3}  */"
+      }
+  }
+  var settings = $.extend( {}, defaults, options );
   var srcHashCode; //
   var itemArray = [];
   var hashCode = function(s){
@@ -13,25 +37,16 @@ var orange = (function(){
     srcHashCode = code;
     var includeHead = false, no = 0;
     trimmedSrc.split('\n').forEach(function(line){
-        var fields = line.split('\t');
+        var fields = trim(line).split('\t');
         if(fields[0].toUpperCase() === 'NAME' && fields[1].toUpperCase() === 'TYPE') {
           includeHead = true; return true;
         }
         var columnName, dataType, isPK, comment, property;
-        if(fields.length === 4 ){
-          columnName = trim(fields[0]).toUpperCase();
-          dataType = trim(fields[1]).toUpperCase();
-          isPK = true;
-          comment = trim(fields[3]);
-        }else if( fields.length === 3 ){
-          columnName = trim(fields[0]).toUpperCase();
-          dataType = trim(fields[1]).toUpperCase();
-          isPK = false;
-          comment = trim(fields[2]);
-        }else{
-          return true;
-        }
-        property = toPropery(columnName);
+        columnName = trim(fields[0]);
+        dataType = getDataType(fields[1]);
+        isPK = fields[2] == 'No' ? true : false;
+        property = columnName ; //toPropery(columnName);
+        comment = trim(fields[5]);
         no++;
         itemArray.push({
           columnName : columnName,
@@ -42,6 +57,10 @@ var orange = (function(){
           property : property
         });
     });
+  }
+  var getDataType = function(s){
+     var pos = s.indexOf('(');
+     return s.substring(0,pos);
   }
   var toPropery = function(columnName){
     if(columnName === null || columnName === undefined ) return '';
@@ -100,7 +119,8 @@ var orange = (function(){
     if(tableName === '' || startsWith(tableName, 'xxx') ){
        return '';
      }else {
-       return tableName.substring(0, 6).toUpperCase() ;
+       return tableName;
+       //return tableName.substring(0, 6).toUpperCase() ;
      }
   }
   var removeFirst = function(src, ch, replaceCh){
@@ -158,12 +178,16 @@ var orange = (function(){
     });
     return rtrim(r);
   }
+  var varNotation = function(field){
+    return format(settings.formats.varNotation,field);
+  }
   var whereCondition = function(src){
     setItemArray(src);
     var r = '';
     itemArray.forEach(function(item){
       if(item.isPK){
-         r = 'AND ' + item.columnName + ' = #' + item.property + '#\n';
+        //  r = 'AND ' + item.columnName + ' = #' + item.property + '#\n';
+         r = 'AND ' + item.columnName + ' = ' + varNotation(item.property) + '\n';
       }
     });
     return r;
@@ -210,7 +234,7 @@ var orange = (function(){
     selectStatement : function(tableName, src){
       setItemArray(src);
       var tableName = tableName || 'xxxxx';
-      var tablePrefix = getTablePrefix(tableName), tablePrefix2;
+      var tablePrefix = getTablePrefix(tableName), tablePrefix2='';
       var r = '';
       r += 'SELECT\n';
       if(tablePrefix != '') tablePrefix2 = tablePrefix + '.';
@@ -221,6 +245,7 @@ var orange = (function(){
       r += tmp ;
       r += '\nFROM ' +  tableName + ' ' + tablePrefix + '\n';
       r += 'WHERE 1=1\n';
+      r += whereCondition(src);
       return r;
     },
     insertStatement : function(tableName, src){
@@ -228,13 +253,15 @@ var orange = (function(){
       var tableName = tableName || 'xxxxx';
       var r = '', tmp;
       r += 'INSERT INTO ' + tableName + '\n(\n';
-      tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      //tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      tmp = applyFormat(src, settings.formats.insert_fields);
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
       r += tmp;
       r += '\n)VALUES(\n';
-      tmp = applyFormat(src, ",#{2}# /** {3}  */");
+      // tmp = applyFormat(src, ",#{2}# /** {3}  */");
+      tmp = applyFormat(src, settings.formats.insert_values);
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
@@ -247,7 +274,8 @@ var orange = (function(){
       var tableName = tableName || 'xxxxx', r = '', tmp ;
       r += 'UPDATE ' + tableName + '\n';
       r += 'SET\n';
-      tmp = applyFormat(src, ",{1} ^ = ^ #{2}# ^ /** {3} */");
+      // tmp = applyFormat(src, ",{1} ^ = ^ #{2} ^ /** {3} */");
+      tmp = applyFormat(src, settings.formats.update_set);
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
@@ -277,27 +305,29 @@ var orange = (function(){
       var tmpArray = [], maxColumnNameLength = 0, maxPropertyLength = 0;
       itemArray.forEach(function(item){
         if(item.isPK) {
-          tmpArray.push(item.columnName + ' = #' + item.property + '#');
+          tmpArray.push(item.columnName + ' = ' + varNotation(item.property) );
         }
       });
       r += tmpArray.join(' AND ');
       r += ' )\n';
       r += 'WHEN MATCHED THEN\n';
       r += 'UPDATE SET\n';
-      tmp = applyFormat(src, ",{1} ^ = ^ #{2}# ^ /** {3} */",'notpkonly');
+      // tmp = applyFormat(src, ",{1} ^ = ^ #{2} ^ /** {3} */",'notpkonly');
+      tmp = applyFormat(src, settings.formats.merge_update_set,'notpkonly');
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
       r += tmp;
       r += '\nWHEN NOT MATCHED THEN\n';
       r += 'INSERT\n(\n';
-      tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      // tmp = applyFormat(src, ',{1} ^ /** {3} */');
+      tmp = applyFormat(src, settings.formats.merge_insert_fields);
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
       r += tmp;
       r += '\n)VALUES(\n';
-      tmp = applyFormat(src, ",#{2}# /** {3}  */");
+      tmp = applyFormat(src, settings.formats.merge_insert_value);
       tmp = fixPosition(tmp);
       tmp = removeFirst(tmp, ',');
       tmp = prePad(tmp, 4, ' ');
@@ -312,4 +342,4 @@ var orange = (function(){
       return r;
     }
   }
-})();
+})(options);

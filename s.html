@@ -2,16 +2,20 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sql Generator from table desc - orange version</title>
+    <title>Sql Generator from table desc - sqldeveloper version</title>
   </head>
   <body>
     <div id="divImsi"></div>
-    orange table info &nbsp;&nbsp; <input type="button" value="Clear" id="btnClear"/>&nbsp;
+    sqldeveloper table info &nbsp;&nbsp; <input type="button" value="Clear" id="btnClear"/>&nbsp;
     <input type="button" value="Table" id="btnShowTable" title="display with table style" />
     <br/><textarea name="src" id="src" rows="10" cols="80">
-      NAME	TYPE
-      NAME	VARCHAR(10)	PK1	이름
-      age	INT	나이
+      REC_KEY	NUMBER(22,0)	No		1	[PK]레코드KEY
+      CLASS_CODE	NUMBER(22,0)	Yes		2	CLASS 번호
+      CLASS_NAME	VARCHAR2(200 BYTE)	Yes		3	CLASS 설명
+      USE_YN	CHAR(1 BYTE)	Yes	'Y'	4	사용여부
+      FIX_YN	CHAR(1 BYTE)	Yes	'N'	5	변경여부
+      FIRST_WORK	VARCHAR2(255 BYTE)	Yes		6	최초작업
+      LAST_WORK	VARCHAR2(255 BYTE)	Yes		7	마지막작업
     </textarea><br/>
     <div id="divTableArea"></div>
     <button type="button" name="btnProperty" id="btnProperty" title="Property">Property</button>
@@ -66,7 +70,7 @@
       src="https://code.jquery.com/jquery-1.12.4.min.js"
       integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
       crossorigin="anonymous"></script>
-   <script src="orange.js"></script>
+   <script src="sqldeveloper.js"></script>
    <script>
    $( document ).ready(function() {
      var $src = $('#src'), $des = $('#des');
@@ -75,11 +79,11 @@
        $src.val(''); $des.val(''); $('#divTableArea').empty(); $('#tableName').val(''); $('#prefix').val('');
      });
      $('#btnShowTable').on('click', function(){
-      $('#divTableArea').html(orange.genTable($src.val())).append('<input type="button" value="X" onclick="$(\'#divTableArea\').empty()"/>');
+      $('#divTableArea').html(babo.genTable($src.val())).append('<input type="button" value="X" onclick="$(\'#divTableArea\').empty()"/>');
      });
      $('#btnFormat').on('click', function(){
          var formatString = $('#prefix').val(), src = $src.val(), r= '';
-         r = orange.applyFormat(src, formatString);
+         r = babo.applyFormat(src, formatString);
          $des.val(r);
      });
      $('.formatbutton').on('click', function(){
@@ -90,7 +94,7 @@
      });
      //button property
      $('#btnProperty').on('click', function(){
-         $des.val(orange.genProperty($src.val()));
+         $des.val(babo.genProperty($src.val()));
      });
      $('input[name=btnSqls]').on('click', function(){
          var src = $src.val();
@@ -100,19 +104,19 @@
          var command = $(this).val(), tableName = $('#tableName').val().toUpperCase();
          var sqlStatement;
          if(command === 'Select'){
-           sqlStatement = orange.selectStatement( tableName, src );
+           sqlStatement = babo.selectStatement( tableName, src );
            $des.val(sqlStatement);
          }else if(command === 'Insert'){
-           sqlStatement = orange.insertStatement( tableName, $src.val() );
+           sqlStatement = babo.insertStatement( tableName, $src.val() );
            $des.val(sqlStatement);
          }else if(command === 'Update'){
-           sqlStatement = orange.updateStatement( tableName, $src.val() );
+           sqlStatement = babo.updateStatement( tableName, $src.val() );
            $des.val(sqlStatement);
          }else if(command === 'Delete'){
-           sqlStatement = orange.deleteStatement( tableName, $src.val() );
+           sqlStatement = babo.deleteStatement( tableName, $src.val() );
            $des.val(sqlStatement);
          }else if(command === 'Merge'){
-           sqlStatement = orange.mergeStatement( tableName, $src.val() );
+           sqlStatement = babo.mergeStatement( tableName, $src.val() );
            $des.val(sqlStatement);
          }
      });
