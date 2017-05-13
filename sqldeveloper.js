@@ -145,9 +145,11 @@ var babo = (function(options){
     return s.indexOf(needle) === 0;
   }
   var ltrim = function(str){
+	if(str == undefined) return '';  
     return str.replace(/^\s\s*/, '')
   }
   var rtrim = function(str){
+	if(str == undefined) return '';  
     return str.replace(/\s\s*$/, '');
   }
   var trim = function(str) {
