@@ -189,7 +189,7 @@ var babo = (function(options){
     itemArray.forEach(function(item){
       if(item.isPK){
         //  r = 'AND ' + item.columnName + ' = #' + item.property + '#\n';
-         r = 'AND ' + item.columnName + ' = ' + varNotation(item.property) + '\n';
+         r += 'AND ' + item.columnName + ' = ' + varNotation(item.property) + '\n';
       }
     });
     return r;

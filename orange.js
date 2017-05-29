@@ -163,7 +163,7 @@ var orange = (function(){
     var r = '';
     itemArray.forEach(function(item){
       if(item.isPK){
-         r = 'AND ' + item.columnName + ' = #' + item.property + '#\n';
+         r += 'AND ' + item.columnName + ' = #' + item.property + '#\n';
       }
     });
     return r;
