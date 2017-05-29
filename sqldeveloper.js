@@ -60,7 +60,11 @@ var babo = (function(options){
   }
   var getDataType = function(s){
      var pos = s.indexOf('(');
-     return s.substring(0,pos);
+	 if(pos < 0){
+			return trim(s);
+	 }else{
+		return s.substring(0,pos);
+	 }
   }
   var toPropery = function(columnName){
     if(columnName === null || columnName === undefined ) return '';
